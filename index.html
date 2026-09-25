@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Редактор надписи</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #fff;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .panel {
+      position: fixed;
+      z-index: 10;
+      top: 16px;
+      left: 16px;
+      width: min(360px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 18px #0002;
+    }
+
+    #страницаАккаунта {
+      z-index: 20;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    input,
+    select {
+      display: block;
+      width: 100%;
+      margin-top: 5px;
+      padding: 8px;
+      font: inherit;
+    }
+
+    input[type="color"] {
+      height: 40px;
+      padding: 3px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+    }
+
+    .value {
+      display: inline-block;
+      margin-top: 4px;
+      color: #555;
+    }
+
+    button {
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .emoji-toggle {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      border: 0;
+      border-radius: 7px;
+      background: #f0f0f0;
+    }
+
+    .emoji-panel {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .emoji-button {
+      padding: 5px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 23px;
+    }
+
+    .emoji-button:hover {
+      background: #eee;
+    }
+
+    .account-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .account-buttons button {
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f7f7f7;
+    }
+
+    .account-buttons .primary {
+      color: white;
+      background: #1769e0;
+      border-color: #1769e0;
+    }
+
+    #сообщение {
+      min-height: 20px;
+      margin: 12px 0 0;
+      font-size: 14px;
+    }
+
+    #надпись {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      max-width: 90vw;
+      margin: 0;
+      color: #ff1493;
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: center;
+      overflow-wrap: anywhere;
+      transform: translate(-50%, -50%);
+    }
+
+    #подсказка {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #555;
+      font-size: clamp(20px, 4vw, 34px);
+      text-align: center;
+    }
+
+    .style-shadow {
+      text-shadow: 3px 3px 5px #555;
+    }
+
+    .style-neon {
+      text-shadow:
+        0 0 5px currentColor,
+        0 0 12px currentColor,
+        0 0 24px currentColor;
+    }
+
+    .style-outline {
+      color: transparent !important;
+      -webkit-text-stroke: 1.5px var(--text-color, #ff1493);
+    }
+
+    .style-italic {
+      font-style: italic;
+    }
+
+    .style-uppercase {
+      text-transform: uppercase;
+    }
+
+    .style-lowercase {
+      text-transform: lowercase;
+    }
+
+    .style-spaced {
+      letter-spacing: 5px;
+    }
+
+    .style-gradient {
+      background: linear-gradient(90deg, #ff1493, #6a5acd, #00bfff);
+      color: transparent !important;
+      background-clip: text;
+      -webkit-background-clip: text;
+    }
+
+    .style-bounce {
+      animation: bounce 1s infinite alternate ease-in-out;
+    }
+
+    @keyframes bounce {
+      from {
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      to {
+        transform: translate(-50%, -58%) scale(1.08);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section class="panel" id="редактор" hidden>
+    <h2>Настройки надписи</h2>
+
+    <label for="текст">Текст</label>
+    <input id="текст" type="text" placeholder="Введите надпись">
+
+    <label for="стиль">Стиль надписи</label>
+    <select id="стиль">
+      <option value="normal">Обычный</option>
+      <option value="style-shadow">Тень</option>
+      <option value="style-neon">Неоновый</option>
+      <option value="style-outline">Контурный</option>
+      <option value="style-italic">Курсив</option>
+      <option value="style-uppercase">Заглавные буквы</option>
+      <option value="style-lowercase">Строчные буквы</option>
+      <option value="style-spaced">Разреженный текст</option>
+      <option value="style-gradient">Градиентный</option>
+      <option value="style-bounce">Прыгающий</option>
+    </select>
+
+    <label for="цветФона">Цвет фона</label>
+    <input id="цветФона" type="color" value="#ffffff">
+
+    <label for="цветТекста">Цвет надписи</label>
+    <input id="цветТекста" type="color" value="#ff1493">
+
+    <label for="размер">Размер надписи</label>
+    <input id="размер" type="range" min="12" max="120" value="36">
+    <span class="value" id="размерЗначение">36 px</span>
+
+    <label for="жирность">Жирность</label>
+    <select id="жирность">
+      <option value="400">Обычная</option>
+      <option value="700" selected>Жирная</option>
+      <option value="900">Очень жирная</option>
+    </select>
+
+    <label for="позицияX">Положение по горизонтали</label>
+    <input id="позицияX" type="range" min="0" max="100" value="50">
+    <span class="value" id="значениеX">50%</span>
+
+    <label for="позицияY">Положение по вертикали</label>
+    <input id="позицияY" type="range" min="0" max="100" value="50">
+    <span class="value" id="значениеY">50%</span>
+
+    <button class="emoji-toggle" id="кнопкаСмайликов" type="button">
+      😊 Смайлики
+    </button>
+    <div class="emoji-panel" id="панельСмайликов" hidden></div>
+  </section>
+
+  <section class="panel" id="страницаАккаунта" hidden>
+    <h2 id="заголовокАккаунта">Регистрация и вход</h2>
+
+    <div id="формаАккаунта">
+      <label for="почта">Электронная почта</label>
+      <input id="почта" type="email" autocomplete="email" placeholder="name@example.com">
+
+      <label for="пароль">Пароль</label>
+      <input id="пароль" type="password" autocomplete="current-password" placeholder="Минимум 6 символов">
+
+      <div class="account-buttons">
+        <button class="primary" id="кнопкаРегистрации" type="button">Зарегистрироваться</button>
+        <button id="кнопкаВхода" type="button">Войти</button>
+        <button id="кнопкаЗакрытия" type="button">Закрыть</button>
+      </div>
+    </div>
+
+    <div id="профиль" hidden>
+      <p>Вы вошли как <strong id="имяПользователя"></strong></p>
+      <div class="account-buttons">
+        <button id="кнопкаВыхода" type="button">Выйти</button>
+        <button id="кнопкаЗакрытияПрофиля" type="button">Закрыть</button>
+      </div>
+    </div>
+
+    <p id="сообщение" role="status"></p>
+  </section>
+
+  <p id="надпись"></p>
+  <div id="подсказка">Нажмите E для настроек<br>или Alt для аккаунта</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+    // Вставьте конфигурацию Firebase для регистрации и входа.
+    const firebaseConfig = {
+      apiKey: "ВСТАВЬТЕ_API_KEY",
+      authDomain: "ВСТАВЬТЕ_AUTH_DOMAIN",
+      projectId: "ВСТАВЬТЕ_PROJECT_ID",
+      appId: "ВСТАВЬТЕ_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const редактор = document.getElementById("редактор");
+    const надпись = document.getElementById("надпись");
+    const полеТекста = document.getElementById("текст");
+    const страницаАккаунта = document.getElementById("страницаАккаунта");
+    const формаАккаунта = document.getElementById("формаАккаунта");
+    const профиль = document.getElementById("профиль");
+    const сообщение = document.getElementById("сообщение");
+    const панельСмайликов = document.getElementById("панельСмайликов");
+    const подсказка = document.getElementById("подсказка");
+
+    const классыСтилей = [
+      "style-shadow",
+      "style-neon",
+      "style-outline",
+      "style-italic",
+      "style-uppercase",
+      "style-lowercase",
+      "style-spaced",
+      "style-gradient",
+      "style-bounce"
+    ];
+
+    const смайлики = [
+      "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣",
+      "😊", "🙂", "😉", "😍", "🥰", "😘", "😎", "🤩",
+      "🥳", "😏", "😴", "🤔", "🤗", "😐", "🙄", "😢",
+      "😭", "😡", "😱", "🤯", "🥶", "🥵", "👻", "🤖",
+      "❤️", "🧡", "💛", "💚", "💙", "💜", "💔", "💕",
+      "💯", "💥", "🔥", "✨", "⭐", "🌈", "🎉", "🎊",
+      "🎁", "🚀", "💎", "👑", "👍", "👏", "🙌", "🙏",
+      "💪", "🫶", "🐶", "🐱", "🐼", "🦊", "🦄", "🍕"
+    ];
+
+    function показатьСообщение(текст, ошибка = false) {
+      сообщение.textContent = текст;
+      сообщение.style.color = ошибка ? "#b3261e" : "#137333";
+    }
+
+    function перевестиОшибку(error) {
+      const ошибки = {
+        "auth/email-already-in-use": "Эта почта уже зарегистрирована.",
+        "auth/invalid-email": "Проверьте электронную почту.",
+        "auth/weak-password": "Пароль должен содержать минимум 6 символов.",
+        "auth/invalid-credential": "Неверная почта или пароль.",
+        "auth/network-request-failed": "Проверьте подключение к интернету.",
+        "auth/operation-not-allowed":
+          "В Firebase включите Authentication → Email/Password."
+      };
+
+      return ошибки[error.code] ||
+        "Не удалось выполнить действие. Проверьте настройки Firebase.";
+    }
+
+    async function зарегистрироваться() {
+      const email = document.getElementById("почта").value.trim();
+      const password = document.getElementById("пароль").value;
+
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        показатьСообщение("Аккаунт создан.");
+      } catch (error) {
+        показатьСообщение(перевестиОшибку(error), true);
+      }
+    }
+
+    async function войти() {
+      const email = document.getElementById("почта").value.trim();
+      const password = document.getElementById("пароль").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        показатьСообщение("Вы вошли в аккаунт.");
+      } catch (error) {
+        показатьСообщение(перевестиОшибку(error), true);
+      }
+    }
+
+    async function выйти() {
+      try {
+        await signOut(auth);
+        показатьСообщение("Вы вышли из аккаунта.");
+      } catch {
+        показатьСообщение("Не удалось выйти из аккаунта.", true);
+      }
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      const заголовок = document.getElementById("заголовокАккаунта");
+
+      if (user) {
+        формаАккаунта.hidden = true;
+        профиль.hidden = false;
+        заголовок.textContent = "Мой профиль";
+        document.getElementById("имяПользователя").textContent = user.email;
+      } else {
+        формаАккаунта.hidden = false;
+        профиль.hidden = true;
+        заголовок.textContent = "Регистрация и вход";
+      }
+    });
+
+    смайлики.forEach((смайлик) => {
+      const кнопка = document.createElement("button");
+      кнопка.type = "button";
+      кнопка.className = "emoji-button";
+      кнопка.textContent = смайлик;
+      кнопка.setAttribute("aria-label", `Добавить ${смайлик}`);
+
+      кнопка.addEventListener("click", () => {
+        const начало = полеТекста.selectionStart;
+        const конец = полеТекста.selectionEnd;
+
+        полеТекста.value =
+          полеТекста.value.slice(0, начало) +
+          смайлик +
+          полеТекста.value.slice(конец);
+
+        надпись.textContent = полеТекста.value;
+        полеТекста.focus();
+
+        const новаяПозиция = начало + смайлик.length;
+        полеТекста.setSelectionRange(новаяПозиция, новаяПозиция);
+      });
+
+      панельСмайликов.appendChild(кнопка);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        редактор.hidden = true;
+        страницаАккаунта.hidden = true;
+        панельСмайликов.hidden = true;
+        подсказка.hidden = надпись.textContent.length > 0;
+        return;
+      }
+
+      if (event.repeat) return;
+
+      const цель = event.target;
+      const вводитТекст =
+        цель instanceof HTMLElement &&
+        (цель.matches("input, textarea, select") || цель.isContentEditable);
+
+      if (вводитТекст) return;
+
+      if (event.key === "Alt") {
+        event.preventDefault();
+
+        const открыть = страницаАккаунта.hidden;
+        страницаАккаунта.hidden = !открыть;
+
+        if (открыть) редактор.hidden = true;
+        return;
+      }
+
+      if (event.code === "KeyE" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+
+        const открыть = редактор.hidden;
+        редактор.hidden = !открыть;
+
+        if (открыть) страницаАккаунта.hidden = true;
+      }
+    });
+
+    полеТекста.addEventListener("input", () => {
+      надпись.textContent = полеТекста.value;
+      подсказка.hidden = полеТекста.value.length > 0;
+    });
+
+    document.getElementById("стиль").addEventListener("change", (event) => {
+      надпись.classList.remove(...классыСтилей);
+
+      if (event.target.value !== "normal") {
+        надпись.classList.add(event.target.value);
+      }
+    });
+
+    document.getElementById("цветФона").addEventListener("input", (event) => {
+      document.body.style.backgroundColor = event.target.value;
+    });
+
+    document.getElementById("цветТекста").addEventListener("input", (event) => {
+      надпись.style.color = event.target.value;
+      надпись.style.setProperty("--text-color", event.target.value);
+    });
+
+    document.getElementById("размер").addEventListener("input", (event) => {
+      надпись.style.fontSize = `${event.target.value}px`;
+      document.getElementById("размерЗначение").textContent =
+        `${event.target.value} px`;
+    });
+
+    document.getElementById("жирность").addEventListener("change", (event) => {
+      надпись.style.fontWeight = event.target.value;
+    });
+
+    document.getElementById("позицияX").addEventListener("input", (event) => {
+      надпись.style.left = `${event.target.value}%`;
+      document.getElementById("значениеX").textContent =
+        `${event.target.value}%`;
+    });
+
+    document.getElementById("позицияY").addEventListener("input", (event) => {
+      надпись.style.top = `${event.target.value}%`;
+      document.getElementById("значениеY").textContent =
+        `${event.target.value}%`;
+    });
+
+    document.getElementById("кнопкаСмайликов").addEventListener("click", () => {
+      панельСмайликов.hidden = !панельСмайликов.hidden;
+    });
+
+    document.getElementById("кнопкаРегистрации")
+      .addEventListener("click", зарегистрироваться);
+
+    document.getElementById("кнопкаВхода")
+      .addEventListener("click", войти);
+
+    document.getElementById("кнопкаВыхода")
+      .addEventListener("click", выйти);
+
+    document.getElementById("кнопкаЗакрытия")
+      .addEventListener("click", () => {
+        страницаАккаунта.hidden = true;
+      });
+
+    document.getElementById("кнопкаЗакрытияПрофиля")
+      .addEventListener("click", () => {
+        страницаАккаунта.hidden = true;
+      });
+  </script>
+</body>
+</html>
