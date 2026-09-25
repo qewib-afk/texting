@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Редактор надписи</title>
+  <title>Редактор надписи и фото</title>
 
   <style>
     * {
@@ -38,6 +38,10 @@
 
     #страницаАккаунта {
       z-index: 20;
+    }
+
+    #менюФото {
+      z-index: 15;
     }
 
     h2 {
@@ -141,6 +145,7 @@
       position: absolute;
       top: 50%;
       left: 50%;
+      z-index: 1;
       max-width: 90vw;
       margin: 0;
       color: #ff1493;
@@ -156,10 +161,30 @@
       position: fixed;
       top: 50%;
       left: 50%;
+      z-index: 1;
       transform: translate(-50%, -50%);
       color: #555;
       font-size: clamp(20px, 4vw, 34px);
       text-align: center;
+    }
+
+    #фотоФона {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    #предпросмотрФото {
+      display: block;
+      max-width: 100%;
+      max-height: 180px;
+      margin-top: 10px;
+      border-radius: 6px;
     }
 
     .style-shadow {
@@ -218,6 +243,8 @@
 </head>
 
 <body>
+  <img id="фотоФона" alt="">
+
   <section class="panel" id="редактор" hidden>
     <h2>Настройки надписи</h2>
 
@@ -269,6 +296,32 @@
     <div class="emoji-panel" id="панельСмайликов" hidden></div>
   </section>
 
+  <section class="panel" id="менюФото" hidden>
+    <h2>Настройки фото</h2>
+
+    <label for="загрузкаФото">Выберите фото</label>
+    <input id="загрузкаФото" type="file" accept="image/*">
+
+    <img id="предпросмотрФото" alt="Предпросмотр фото" hidden>
+
+    <label for="эффектФото">Эффект</label>
+    <select id="эффектФото">
+      <option value="none">Без эффекта</option>
+      <option value="blue">Синий оттенок</option>
+      <option value="grayscale">Чёрно-белый</option>
+      <option value="sepia">Сепия</option>
+      <option value="blur">Размытие</option>
+    </select>
+
+    <label for="прозрачностьФото">Прозрачность фото</label>
+    <input id="прозрачностьФото" type="range" min="0" max="100" value="100">
+    <span class="value" id="значениеПрозрачности">100%</span>
+
+    <button class="emoji-toggle" id="удалитьФото" type="button">
+      Удалить фото
+    </button>
+  </section>
+
   <section class="panel" id="страницаАккаунта" hidden>
     <h2 id="заголовокАккаунта">Регистрация и вход</h2>
 
@@ -298,7 +351,7 @@
   </section>
 
   <p id="надпись"></p>
-  <div id="подсказка">Нажмите E для настроек<br>или Alt для аккаунта</div>
+  <div id="подсказка">Нажмите E для настроек<br>P — настройки фото<br>Alt — аккаунт</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -331,6 +384,66 @@
     const сообщение = document.getElementById("сообщение");
     const панельСмайликов = document.getElementById("панельСмайликов");
     const подсказка = document.getElementById("подсказка");
+
+    const фотоФона = document.getElementById("фотоФона");
+    const загрузкаФото = document.getElementById("загрузкаФото");
+    const эффектФото = document.getElementById("эффектФото");
+    const прозрачностьФото = document.getElementById("прозрачностьФото");
+    const предпросмотрФото = document.getElementById("предпросмотрФото");
+
+    let адресФото = "";
+
+    function обновитьЭффектФото() {
+      const фильтры = {
+        none: "",
+        blue: "saturate(1.5) sepia(1) hue-rotate(170deg)",
+        grayscale: "grayscale(1)",
+        sepia: "sepia(1)",
+        blur: "blur(3px)"
+      };
+
+      фотоФона.style.filter = фильтры[эффектФото.value] || "";
+      фотоФона.style.opacity = Number(прозрачностьФото.value) / 100;
+    }
+
+    загрузкаФото.addEventListener("change", () => {
+      const файл = загрузкаФото.files?.[0];
+      if (!файл) return;
+
+      if (!файл.type.startsWith("image/")) {
+        alert("Пожалуйста, выберите файл изображения.");
+        загрузкаФото.value = "";
+        return;
+      }
+
+      if (адресФото) URL.revokeObjectURL(адресФото);
+
+      адресФото = URL.createObjectURL(файл);
+      фотоФона.src = адресФото;
+      фотоФона.style.display = "block";
+      предпросмотрФото.src = адресФото;
+      предпросмотрФото.hidden = false;
+      обновитьЭффектФото();
+    });
+
+    эффектФото.addEventListener("change", обновитьЭффектФото);
+
+    прозрачностьФото.addEventListener("input", () => {
+      document.getElementById("значениеПрозрачности").textContent =
+        `${прозрачностьФото.value}%`;
+      обновитьЭффектФото();
+    });
+
+    document.getElementById("удалитьФото").addEventListener("click", () => {
+      фотоФона.removeAttribute("src");
+      фотоФона.style.display = "none";
+      предпросмотрФото.removeAttribute("src");
+      предпросмотрФото.hidden = true;
+      загрузкаФото.value = "";
+
+      if (адресФото) URL.revokeObjectURL(адресФото);
+      адресФото = "";
+    });
 
     const классыСтилей = [
       "style-shadow",
@@ -440,6 +553,7 @@
           полеТекста.value.slice(конец);
 
         надпись.textContent = полеТекста.value;
+        подсказка.hidden = полеТекста.value.length > 0;
         полеТекста.focus();
 
         const новаяПозиция = начало + смайлик.length;
@@ -453,6 +567,7 @@
       if (event.key === "Escape") {
         редактор.hidden = true;
         страницаАккаунта.hidden = true;
+        document.getElementById("менюФото").hidden = true;
         панельСмайликов.hidden = true;
         подсказка.hidden = надпись.textContent.length > 0;
         return;
@@ -473,7 +588,24 @@
         const открыть = страницаАккаунта.hidden;
         страницаАккаунта.hidden = !открыть;
 
-        if (открыть) редактор.hidden = true;
+        if (открыть) {
+          редактор.hidden = true;
+          document.getElementById("менюФото").hidden = true;
+        }
+        return;
+      }
+
+      if (event.code === "KeyP" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+
+        const менюФото = document.getElementById("менюФото");
+        const открыть = менюФото.hidden;
+        менюФото.hidden = !открыть;
+
+        if (открыть) {
+          редактор.hidden = true;
+          страницаАккаунта.hidden = true;
+        }
         return;
       }
 
@@ -483,7 +615,10 @@
         const открыть = редактор.hidden;
         редактор.hidden = !открыть;
 
-        if (открыть) страницаАккаунта.hidden = true;
+        if (открыть) {
+          страницаАккаунта.hidden = true;
+          document.getElementById("менюФото").hidden = true;
+        }
       }
     });
 
